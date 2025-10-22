@@ -1,0 +1,81 @@
+package com.alpha.logistics.Controller;
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.alpha.logistics.Dto.DriverDto;
+import com.alpha.logistics.Dto.LoadingDto;
+import com.alpha.logistics.Dto.ResponseStructure;
+import com.alpha.logistics.Dto.TruckDto;
+import com.alpha.logistics.Dto.UnloadingDto;
+import com.alpha.logistics.Entity.Address;
+import com.alpha.logistics.Entity.Carrier;
+import com.alpha.logistics.Entity.Driver;
+import com.alpha.logistics.Entity.Order;
+import com.alpha.logistics.Entity.Truck;
+import com.alpha.logistics.Service.CarrierService;
+import com.alpha.logistics.Service.DriverService;
+import com.alpha.logistics.Service.OrderService;
+import com.alpha.logistics.Service.TruckService;
+import com.alpha.logistics.Service.addressService;
+
+@RestController
+@RequestMapping("/admin")
+public class AdminController {
+
+	@Autowired
+	private addressService addressServ;
+	@PostMapping("/saveaddress")
+	public ResponseEntity<ResponseStructure<Address>> saveaddress(@RequestBody Address add) {
+	return addressServ.saveAddress(add);
+	
+	}
+	@Autowired
+	private CarrierService carrierServ;
+	@PostMapping("/saveCarrier")
+	public  ResponseEntity<ResponseStructure<Carrier>> saveCarrier(@RequestBody Carrier carrier) {
+		 return carrierServ.saveCarrier(carrier);
+	}
+	@Autowired
+	private TruckService truckServ;
+	@PostMapping("/saveTruck")
+	public ResponseEntity<ResponseStructure<Truck>> saveTruck(@RequestBody TruckDto truck) {
+		return truckServ.saveTruck(truck);
+	}
+	@Autowired
+	private DriverService driverserv;
+	@PostMapping("/saveDriver")
+	public ResponseEntity<ResponseStructure<Carrier>> saveDriver(@RequestBody DriverDto driver) {
+	 return 	driverserv.saveDriver(driver);
+	}
+	
+	@PostMapping("/updateDriver")
+	public ResponseEntity<ResponseStructure<Driver>> updateDriver( @RequestParam int driverid,int truckid,int carrierid) {
+		return driverserv.updateDriver(driverid,truckid,carrierid);
+	}
+	@Autowired
+	private OrderService orderServ;
+	@PostMapping("/UpdateOrder")
+	public ResponseEntity<ResponseStructure<Order>> UpdateOrder(@RequestParam int orderid,@RequestBody LoadingDto loadingdto) {
+	return	orderServ.updateOrder(orderid, loadingdto);
+	}
+	@PostMapping("/UpdateUnloading")
+	public ResponseEntity<ResponseStructure<Order>> UpdateUnloading(@RequestParam int orderid,@RequestBody UnloadingDto unloadingdto) {
+		return orderServ.UpdateUnloading(orderid, unloadingdto);
+	}
+	 
+	@PostMapping("/SendMail")
+	public void SendMail(@RequestParam int orderid) {
+		orderServ.SendFinalMail(orderid);
+	}
+
+	
+
+	
+}
