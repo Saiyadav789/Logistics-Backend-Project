@@ -1,0 +1,183 @@
+package com.alpha.logistics.Service;
+
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.alpha.logistics.Dto.LoadingDto;
+import com.alpha.logistics.Dto.OrderDto;
+import com.alpha.logistics.Dto.ResponseStructure;
+import com.alpha.logistics.Dto.UnloadingDto;
+import com.alpha.logistics.Entity.Address;
+import com.alpha.logistics.Entity.Cargo;
+import com.alpha.logistics.Entity.Carrier;
+import com.alpha.logistics.Entity.Loading;
+import com.alpha.logistics.Entity.Order;
+import com.alpha.logistics.Entity.Truck;
+import com.alpha.logistics.Entity.Unloading;
+import com.alpha.logistics.Exception.LoadingAddressNotFoundException;
+import com.alpha.logistics.Exception.OrderNotFoundException;
+import com.alpha.logistics.Exception.TruckNotFoundException;
+import com.alpha.logistics.Exception.UnloadingAddressNotFoundException;
+import com.alpha.logistics.Repository.AddressRepo;
+import com.alpha.logistics.Repository.OrderRepository;
+import com.alpha.logistics.Repository.TruckRepo;
+
+@Service
+public class OrderService {
+
+	@Autowired
+	OrderRepository orderrepo;
+	
+	@Autowired
+	AddressRepo addressrepo;
+	
+	@Autowired
+	CarrierService carrierservice;
+	
+	@Autowired
+	TruckRepo truckRepo;
+
+	@Autowired
+	MailService mailserv;
+	
+	
+	public ResponseEntity<ResponseStructure<Order>> placeuserOrder(OrderDto orderdto) {
+		Order order=new Order();
+		
+		order.setId(orderdto.getId());
+		order.setOrderdate(orderdto.getOrderdate());
+		
+		double cost=10*orderdto.getCargoWeight()*orderdto.getCargoCount();
+		
+		order.setCost(cost);
+		
+		Cargo cargo=new Cargo();
+		cargo.setId(orderdto.getId());
+		cargo.setName(orderdto.getCargoName());
+		cargo.setDescription(orderdto.getCargoDescription());
+		cargo.setWeight(orderdto.getCargoWeight());
+		cargo.setCount(orderdto.getCargoCount());
+		
+		order.setCargo(cargo);
+		
+		Carrier carrier=carrierservice.find(104);
+		
+		
+		order.setCarrier(carrier);
+		
+		Loading loading =new Loading();
+	Optional<Address>	addressOptional=addressrepo.findById(orderdto.getLoadingAddressId());
+	if(!addressOptional.isPresent()) {
+		throw new LoadingAddressNotFoundException();
+	}
+	
+	Address loadingAddress=addressOptional.get();
+	loading.setAddress(loadingAddress);
+	
+	order.setLoading(loading);
+	
+	Unloading unloading =new Unloading();
+Optional<Address>	unloadingOptional=addressrepo.findById(orderdto.getUnloadingAddressId());
+if(!unloadingOptional.isPresent()) {
+	throw new UnloadingAddressNotFoundException();
+}
+Address unloadingAddress=unloadingOptional.get();
+unloading.setAddress(unloadingAddress);
+
+order.setUnloading(unloading);
+
+order.setEmail(orderdto.getEmail());
+
+Order saveOrder=orderrepo.save(order);
+
+	ResponseStructure<Order> responsestructure=new ResponseStructure<Order>();
+	responsestructure.setMessage("Order placed");
+	responsestructure.setData(saveOrder);
+	responsestructure.setStatuscode(HttpStatus.ACCEPTED.value());
+	
+	String subject="ORDER PLACED";
+	String content="YOUR ORDER PLACED FROM "+order.getLoading().getAddress().getCity()+"TO"+order.getUnloading().getAddress().getCity()+"FOR THE COST OF"+order.getCost();
+	mailserv.sendMail(orderdto.getEmail(), subject, content);
+	
+	return new ResponseEntity<ResponseStructure<Order>>(responsestructure,HttpStatus.CREATED);
+	}
+
+	public ResponseEntity<ResponseStructure<Order>> updateOrder(int orderid, int truckid) {
+		Optional<Order> order=orderrepo.findById(orderid);
+		if(!order.isPresent()) {
+			throw new OrderNotFoundException();
+		}
+		Optional<Truck> truck=truckRepo.findById(truckid);
+		if(!truck.isPresent()) {
+			throw new TruckNotFoundException();
+		}
+		Truck t=truck.get();
+		Order o=order.get();
+		
+		int TruckCapacity=(int) t.getCapacity();
+		
+		int TotalOrderWeight=(int) (o.getCargo().getWeight()*o.getCargo().getCount());
+		
+		if(TotalOrderWeight<=TruckCapacity) {
+			o.setCarrier(t.getCarrier());
+			t.setCapacity(TruckCapacity-TotalOrderWeight);
+			
+			truckRepo.save(t);
+			
+			orderrepo.save(o);
+			
+			
+			ResponseStructure<Order> responsestructure=new ResponseStructure<Order>();
+			responsestructure.setMessage("Order Updated");
+			responsestructure.setData(o);
+			responsestructure.setStatuscode(HttpStatus.ACCEPTED.value());
+			return new ResponseEntity<ResponseStructure<Order>>(responsestructure,HttpStatus.CREATED);
+			
+			
+		}
+		System.err.println("Order Not Found41");
+		return null;
+		
+	}
+
+	public ResponseEntity<ResponseStructure<Order>> updateOrder(int orderid, LoadingDto loadingdto) {
+		Optional<Order> o=orderrepo.findById(orderid);
+		Order order=o.get();
+		order.getLoading().setDate(loadingdto.getDate());
+		order.getLoading().setTime(loadingdto.getTime());
+		order.setStatus("Pending");
+		
+		orderrepo.save(order);
+		
+		ResponseStructure<Order> responsestructure=new ResponseStructure<Order>();
+		responsestructure.setMessage("Order Loading Updated");
+		responsestructure.setData(order);
+		responsestructure.setStatuscode(HttpStatus.ACCEPTED.value());
+		return new ResponseEntity<ResponseStructure<Order>>(responsestructure,HttpStatus.CREATED);
+		
+	}
+
+	public ResponseEntity<ResponseStructure<Order>> UpdateUnloading(int orderid, UnloadingDto unloadingdto) {
+		Optional<Order> unloading=orderrepo.findById(orderid);
+		Order order=unloading.get();
+		order.getUnloading().setDate(unloadingdto.getDate());
+		order.getUnloading().setTime(unloadingdto.getTime());
+		order.setStatus("Pending");
+		
+		orderrepo.save(order);
+
+		ResponseStructure<Order> responsestructure=new ResponseStructure<Order>();
+		responsestructure.setMessage("Order Unloading Updated");
+		responsestructure.setData(order);
+		responsestructure.setStatuscode(HttpStatus.ACCEPTED.value());
+		return new ResponseEntity<ResponseStructure<Order>>(responsestructure,HttpStatus.CREATED);
+		
+		
+	}
+	
+	
+}

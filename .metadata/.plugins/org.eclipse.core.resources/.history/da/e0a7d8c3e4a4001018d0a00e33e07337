@@ -1,0 +1,13 @@
+package com.alpha.logistics.Dao;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.alpha.logistics.Repository.OrderRepository;
+
+public class LoadingDao {
+	
+	@Autowired
+	OrderRepository orderRepo;
+
+
+}

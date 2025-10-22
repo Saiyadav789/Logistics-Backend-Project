@@ -1,0 +1,5 @@
+package com.alpha.logistics.Service;
+
+public class MailService {
+
+}
